@@ -26,7 +26,7 @@ This project, **Inception**, is a system administration exercise aimed at deploy
 ### 📂 Project Structure
 
 ```plaintext
-/home/nrabehar/lab/42-inception/
+/lab/inception/
 ├── docker-compose.yml
 ├── srcs/
 │   ├── wordpress/
