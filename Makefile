@@ -69,7 +69,7 @@ logs:
 # Show service status
 status:
 	@echo "$(YELLOW)📊 Service status:$(NC)"
-	sudo docker compose -f $(COMPOSE_FILE) ps
+	sudo docker compose -f $(COMPOSE_FILE) ps -a
 
 # Test WordPress connection
 test:
