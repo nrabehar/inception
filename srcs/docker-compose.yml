@@ -1,0 +1,96 @@
+services:
+  wordpress:
+    build: requirements/wordpress
+    volumes:
+      - wordpress_data:/var/www/html/wp
+    ports:
+      - "9000:9000"
+    environment:
+      WP_DATABASE_NAME: ${WP_DATABASE_NAME}
+      WP_DATABASE_USER: ${WP_DATABASE_USER}
+      WP_DATABASE_PASSWORD: ${WP_DATABASE_PASSWORD}
+      WP_ADMIN_EMAIL: ${WP_ADMIN_EMAIL}
+      WP_ADMIN_USER: ${WP_ADMIN_USER}
+      WP_ADMIN_PASSWORD: ${WP_ADMIN_PASSWORD}
+      WP_USER_EMAIL: ${WP_USER_EMAIL}
+      WP_USER_NAME: ${WP_USER_NAME}
+      WP_USER_PASSWORD: ${WP_USER_PASSWORD}
+      WP_SITE_URL: ${WP_SITE_URL}
+      WP_SITE_NAME: ${WP_SITE_NAME}
+      REDIS_HOST: ${REDIS_HOST}
+      REDIS_PORT: ${REDIS_PORT}
+      REDIS_PREFIX: ${REDIS_PREFIX}
+      DB_HOST: ${DB_HOST}
+    depends_on:
+      - mariadb
+      - redis
+    networks:
+      - web_network
+      - db_network
+      - cache_network
+    restart: always
+  mariadb:
+    build: requirements/mariadb
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    environment:
+      DB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      WP_DATABASE_NAME: ${WP_DATABASE_NAME}
+      WP_DATABASE_USER: ${WP_DATABASE_USER}
+      WP_DATABASE_PASSWORD: ${WP_DATABASE_PASSWORD}
+    ports:
+      - "3306:3306"
+    networks:
+      - db_network
+    restart: always
+  nginx:
+    build: requirements/nginx
+    volumes:
+      - wordpress_data:/var/www/html/wp:ro
+    ports:
+      - "443:443"
+    depends_on:
+      - wordpress
+    networks:
+      - web_network
+    restart: always
+  redis:
+    build: requirements/redis
+    ports:
+      - "6379:6379"
+    networks:
+      - cache_network
+    restart: always
+  ftp:
+    build: requirements/ftp
+    ports:
+      - "21:21"
+      - "20:20"
+    environment:
+      FTP_USER: ${FTP_USER}
+      FTP_PASSWORD: ${FTP_PASSWORD}
+    volumes:
+      - wordpress_data:/var/www/html/wp
+    restart: always
+
+volumes:
+  wordpress_data:
+    driver: local
+    # driver_opts:
+    #   type: none
+    #   device: /home/nrabehar/data/wordpress
+    #   o: bind
+  mariadb_data:
+    driver: local
+    # driver_opts:
+    #   type: none
+    #   device: /home/nrabehar/data/mariadb
+    #   o: bind
+
+networks:
+  web_network:
+    driver: bridge
+  db_network:
+    driver: bridge
+  cache_network:
+    driver: bridge

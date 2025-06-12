@@ -1,68 +1,26 @@
 FROM debian:bullseye-slim
-LABEL maintainer="nrabehar <nrabehar@student.42antananarivo.mg>"
 
-# Install PHP-FPM, PHP extensions, and utilities
 RUN apt-get update && \
-    apt-get install -y \
-        php7.4-fpm \
-        php7.4-mysql \
-        php7.4-curl \
-        php7.4-gd \
-        php7.4-intl \
-        php7.4-mbstring \
-        php7.4-soap \
-        php7.4-xml \
-        php7.4-xmlrpc \
-        php7.4-zip \
-        php7.4-cli \
-        wget \
-        curl \
-        mariadb-client && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+	apt-get install -y php7.4-fpm php7.4-mysql curl\
+	php7.4-curl php7.4-dom php7.4-imagick \
+	php7.4-mbstring php7.4-zip php7.4-gd php7.4-intl
 
-# Create www-data user directories
-RUN mkdir -p /var/www/html && \
-    chown -R www-data:www-data /var/www/html
+RUN mkdir -p /var/www/html/wp /run/php
 
-# Download and install WordPress
-WORKDIR /var/www/html
-RUN wget https://wordpress.org/latest.tar.gz && \
-    tar -xzf latest.tar.gz --strip-components=1 && \
-    rm latest.tar.gz && \
-    chown -R www-data:www-data /var/www/html
+WORKDIR /var/www/html/wp
 
-# Download WP-CLI for WordPress management
-RUN curl -O https://raw.githubusercontent.com/wp-cli/wp-cli/v2.8.1/wp-cli.phar && \
-    chmod +x wp-cli.phar && \
-    mv wp-cli.phar /usr/local/bin/wp
+RUN sed -i 's/listen = .*/listen = 9000/' /etc/php/7.4/fpm/pool.d/www.conf
 
-# Create PHP-FPM run directory
-RUN mkdir -p /run/php
+RUN curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
+RUN chmod +x wp-cli.phar
 
-# Copy PHP-FPM configuration
-COPY conf/www.conf /etc/php/7.4/fpm/pool.d/www.conf
-COPY conf/php-fpm.conf /etc/php/7.4/fpm/php-fpm.conf
+RUN mv wp-cli.phar /usr/local/bin/wp
 
-# Copy WordPress configuration
-COPY conf/wp-config.php /var/www/html/wp-config.php
+COPY ./tools/setup.sh /tmp/setup.sh
+RUN chmod +x /tmp/setup.sh
 
-# Copy entrypoint script
-COPY conf/entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
 
-# Set proper permissions
-RUN chown -R www-data:www-data /var/www/html && \
-    chmod -R 755 /var/www/html
-
-# Expose PHP-FPM port
 EXPOSE 9000
 
-# Set working directory
-WORKDIR /var/www/html
-
-# Use entrypoint script
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
-
-# Start PHP-FPM
+ENTRYPOINT [ "/tmp/setup.sh" ]
 CMD ["php-fpm7.4", "-F"]
