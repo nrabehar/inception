@@ -1,0 +1,4 @@
+[mysqld]
+init-file = /var/lib/mysql/init.sql
+bind-address = 0.0.0.0
+port = 3306

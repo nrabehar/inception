@@ -1,96 +1,75 @@
 services:
-  wordpress:
-    build: requirements/wordpress
-    volumes:
-      - wordpress_data:/var/www/html/wp
-    ports:
-      - "9000:9000"
-    environment:
-      WP_DATABASE_NAME: ${WP_DATABASE_NAME}
-      WP_DATABASE_USER: ${WP_DATABASE_USER}
-      WP_DATABASE_PASSWORD: ${WP_DATABASE_PASSWORD}
-      WP_ADMIN_EMAIL: ${WP_ADMIN_EMAIL}
-      WP_ADMIN_USER: ${WP_ADMIN_USER}
-      WP_ADMIN_PASSWORD: ${WP_ADMIN_PASSWORD}
-      WP_USER_EMAIL: ${WP_USER_EMAIL}
-      WP_USER_NAME: ${WP_USER_NAME}
-      WP_USER_PASSWORD: ${WP_USER_PASSWORD}
-      WP_SITE_URL: ${WP_SITE_URL}
-      WP_SITE_NAME: ${WP_SITE_NAME}
-      REDIS_HOST: ${REDIS_HOST}
-      REDIS_PORT: ${REDIS_PORT}
-      REDIS_PREFIX: ${REDIS_PREFIX}
-      DB_HOST: ${DB_HOST}
-    depends_on:
-      - mariadb
-      - redis
-    networks:
-      - web_network
-      - db_network
-      - cache_network
-    restart: always
   mariadb:
+    image: mariadb
     build: requirements/mariadb
+    container_name: mariadb
     volumes:
       - mariadb_data:/var/lib/mysql
     environment:
-      DB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
-      WP_DATABASE_NAME: ${WP_DATABASE_NAME}
-      WP_DATABASE_USER: ${WP_DATABASE_USER}
-      WP_DATABASE_PASSWORD: ${WP_DATABASE_PASSWORD}
-    ports:
-      - "3306:3306"
-    networks:
-      - db_network
+      DB_ROOT_PASS: ${DB_ROOT_PASS}
+      WP_DB_NAME: ${WP_DB_NAME}
+      WP_DB_USER: ${WP_DB_USER}
+      WP_DB_PASS: ${WP_DB_PASS}
     restart: always
-  nginx:
-    build: requirements/nginx
+    networks:
+      - inception
+
+  wordpress:
+    image: wordpress
+    build: requirements/wordpress
+    container_name: wordpress
     volumes:
-      - wordpress_data:/var/www/html/wp:ro
-    ports:
-      - "443:443"
+      - wordpress_data:/var/www/html/
+    environment:
+      WP_DB_NAME: ${WP_DB_NAME}
+      WP_DB_USER: ${WP_DB_USER}
+      WP_DB_PASS: ${WP_DB_PASS}
+      WP_DB_HOST: ${DB_HOST}
+      WP_ADMIN_EMAIL: ${WP_ADMIN_EMAIL}
+      WP_ADMIN_NAME: ${WP_ADMIN_NAME}
+      WP_ADMIN_PASS: ${WP_ADMIN_PASS}
+      WP_USER_EMAIL: ${WP_USER_EMAIL}
+      WP_USER_NAME: ${WP_USER_NAME}
+      WP_USER_PASS: ${WP_USER_PASS}
+      WP_SITE_NAME: ${WP_SITE_NAME}
+      WP_SITE_URL: ${WP_SITE_URL}
+    restart: always
+    networks:
+      - inception
+
+  nginx:
+    image: nginx
+    build: requirements/nginx
+    container_name: nginx
     depends_on:
       - wordpress
-    networks:
-      - web_network
-    restart: always
-  redis:
-    build: requirements/redis
-    ports:
-      - "6379:6379"
-    networks:
-      - cache_network
-    restart: always
-  ftp:
-    build: requirements/ftp
-    ports:
-      - "21:21"
-      - "20:20"
-    environment:
-      FTP_USER: ${FTP_USER}
-      FTP_PASSWORD: ${FTP_PASSWORD}
     volumes:
-      - wordpress_data:/var/www/html/wp
+      - wordpress_data:/var/www/html/
+    environment:
+      - DOMAIN_NAME=${DOMAIN_NAME}
+    ports:
+      - "443:443"
     restart: always
+    networks:
+      - inception
 
 volumes:
-  wordpress_data:
-    driver: local
-    # driver_opts:
-    #   type: none
-    #   device: /home/nrabehar/data/wordpress
-    #   o: bind
   mariadb_data:
+    name: mariadb_data
     driver: local
-    # driver_opts:
-    #   type: none
-    #   device: /home/nrabehar/data/mariadb
-    #   o: bind
+    driver_opts:
+      type: none
+      device: /home/nrabehar/data/mariadb
+      o: bind
+  wordpress_data:
+    name: wordpress_data
+    driver: local
+    driver_opts:
+      type: none
+      device: /home/nrabehar/data/wordpress
+      o: bind
 
 networks:
-  web_network:
-    driver: bridge
-  db_network:
-    driver: bridge
-  cache_network:
+  inception:
+    name: inception
     driver: bridge

@@ -1,30 +1,18 @@
 #!/bin/bash
 set -e
 
-CONFIG_PATH="/etc/mysql/mariadb.conf.d/50-server.cnf"
+INIT_FILE="/var/lib/mysql/init.sql"
 
-DB_ROOT_PASSWORD="root"
-WP_DATABASE_NAME="wordpress"
-WP_DATABASE_USER="wp-user"
-WP_DATABASE_PASSWORD="wp-password"
+mkdir -p /run/mysqld
+chown -R mysql:mysql /run/mysqld && chmod 750 /run/mysqld
 
-sed -i "s|bind-address.*|bind-address = 0.0.0.0|" $CONFIG_PATH
+echo "CREATE DATABASE IF NOT EXISTS $WP_DB_NAME;" > $INIT_FILE
+echo "CREATE USER IF NOT EXISTS '$WP_DB_USER'@'%' IDENTIFIED BY '$WP_DB_PASS';" >> $INIT_FILE
+echo "GRANT ALL PRIVILEGES ON $WP_DB_NAME.* TO '$WP_DB_USER'@'%';" >> $INIT_FILE
+echo "FLUSH PRIVILEGES;" >> $INIT_FILE
 
-mysqld_safe --skip-networking &
+if [ ! -d "/var/lib/mysql/mysql" ]; then
+    mysqld --initialize-insecure --user=mysql --datadir="/var/lib/mysql"
+fi
 
-until mysqladmin ping --silent; do
-		echo "Waiting for MariaDB to start..."
-		sleep 1
-done
-
-mysql -uroot -p$DB_ROOT_PASSWORD <<-EOSQL
-	ALTER USER 'root'@'localhost' IDENTIFIED BY '$DB_ROOT_PASSWORD';
-	CREATE DATABASE IF NOT EXISTS $WP_DATABASE_NAME;
-	CREATE USER IF NOT EXISTS '$WP_DATABASE_USER'@'%' IDENTIFIED BY '$WP_DATABASE_PASSWORD';
-	GRANT ALL PRIVILEGES ON $WP_DATABASE_NAME.* TO '$WP_DATABASE_USER'@'%' IDENTIFIED BY '$WP_DATABASE_PASSWORD';
-	FLUSH PRIVILEGES;
-EOSQL
-
-mysqladmin -uroot -p$DB_ROOT_PASSWORD shutdown
-
-exec "$@"
+exec "mysqld_safe"
